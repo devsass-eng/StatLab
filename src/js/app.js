@@ -2,7 +2,13 @@
 // StatLab — App Router & Theme Toggle
 // ============================================================
 
-const { ipcRenderer } = require('electron');
+// ── Environment Detection ──────────────────────────────────
+let ipcRenderer = null;
+const isElectron = window && window.process && window.process.type;
+
+if (isElectron) {
+  ipcRenderer = require('electron').ipcRenderer;
+}
 
 // ── Theme ──────────────────────────────────────────────────
 let isDark = true;
@@ -24,10 +30,41 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
   applyTheme();
 });
 
-// ── Window Controls ─────────────────────────────────────────
-document.getElementById('btn-min').addEventListener('click', () => ipcRenderer.send('minimize-window'));
-document.getElementById('btn-max').addEventListener('click', () => ipcRenderer.send('maximize-window'));
-document.getElementById('btn-close').addEventListener('click', () => ipcRenderer.send('close-window'));
+// ── Window & PWA Controls ───────────────────────────────────
+if (isElectron) {
+  document.getElementById('btn-min').addEventListener('click', () => ipcRenderer.send('minimize-window'));
+  document.getElementById('btn-max').addEventListener('click', () => ipcRenderer.send('maximize-window'));
+  document.getElementById('btn-close').addEventListener('click', () => ipcRenderer.send('close-window'));
+} else {
+  // Hide desktop controls if running in a web browser/PWA
+  document.getElementById('btn-min').style.display = 'none';
+  document.getElementById('btn-max').style.display = 'none';
+  document.getElementById('btn-close').style.display = 'none';
+}
+
+// PWA Install Prompt handling
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent Chrome 67 and earlier from automatically showing the prompt
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  deferredPrompt = e;
+  // Show the install button in the titlebar
+  const installBtn = document.getElementById('btn-install-pwa');
+  if(installBtn) installBtn.style.display = 'block';
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        document.getElementById('btn-install-pwa').style.display = 'none';
+      }
+      deferredPrompt = null;
+    });
+  }
+}
 
 // ── Page Definitions ────────────────────────────────────────
 const pages = {
