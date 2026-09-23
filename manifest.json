@@ -1,0 +1,17 @@
+{
+  "name": "StatLab Pro",
+  "short_name": "StatLab",
+  "description": "Comprehensive university-level Statistics and Probability Calculator",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#7c6aff",
+  "icons": [
+    {
+      "src": "src/assets/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

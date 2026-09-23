@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StatLab — Statistics & Probability</title>
+  <meta name="description" content="StatLab: Your personal statistics and probability study companion. Scientific calculator, stats lab, probability tools, distributions, simulations, practice exams and more."/>
+  
+  <!-- PWA Manifest & Meta -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#7c6aff" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Fonts loaded locally via CSS fallback for offline use -->
+  <link rel="stylesheet" href="src/css/styles.css"/>
+</head>
+<body class="dark-mode" id="app-body">
+
+  <!-- Title Bar -->
+  <div class="titlebar" id="titlebar">
+    <div class="titlebar-left">
+      <div class="titlebar-logo">
+        <span class="logo-icon">∑</span>
+        <span class="logo-text">StatLab</span>
+      </div>
+    </div>
+    <div class="titlebar-center" id="page-title">Home</div>
+    <div class="titlebar-right">
+      <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">☀️</button>
+      <button class="win-btn" id="btn-min" title="Minimize">─</button>
+      <button class="win-btn" id="btn-max" title="Maximize">□</button>
+      <button class="win-btn close" id="btn-close" title="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- Sidebar Navigation -->
+  <div class="sidebar" id="sidebar">
+    <nav class="nav-menu">
+      <a class="nav-item active" data-page="home" href="#" id="nav-home">
+        <span class="nav-icon">⌂</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a class="nav-item" data-page="calculator" href="#" id="nav-calculator">
+        <span class="nav-icon">🧮</span>
+        <span class="nav-label">Calculator</span>
+      </a>
+      <a class="nav-item" data-page="statistics" href="#" id="nav-statistics">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Statistics Lab</span>
+      </a>
+      <a class="nav-item" data-page="probability" href="#" id="nav-probability">
+        <span class="nav-icon">🎲</span>
+        <span class="nav-label">Probability</span>
+      </a>
+      <a class="nav-item" data-page="distributions" href="#" id="nav-distributions">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Distributions</span>
+      </a>
+      <a class="nav-item" data-page="hypothesis" href="#" id="nav-hypothesis">
+        <span class="nav-icon">⚖️</span>
+        <span class="nav-label">Hypothesis Testing</span>
+      </a>
+      <a class="nav-item" data-page="regression" href="#" id="nav-regression">
+        <span class="nav-icon">📉</span>
+        <span class="nav-label">Linear Regression</span>
+      </a>
+      <a class="nav-item" data-page="simulation" href="#" id="nav-simulation">
+        <span class="nav-icon">🧪</span>
+        <span class="nav-label">Simulation</span>
+      </a>
+      <a class="nav-item" data-page="practice" href="#" id="nav-practice">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">Exam Practice</span>
+      </a>
+      <a class="nav-item" data-page="exercises" href="#" id="nav-exercises">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">Exercises</span>
+      </a>
+      <a class="nav-item" data-page="formulas" href="#" id="nav-formulas">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label">Formulas</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content" id="main-content">
+    <!-- Pages are injected here by app.js -->
+  </main>
+
+  <!-- Local libraries — works fully offline -->
+  <script src="src/lib/chart.umd.js"></script>
+  <script src="src/lib/math.js"></script>
+  <script src="src/js/app.js"></script>
+  <script src="src/js/calculator.js"></script>
+  <script src="src/js/statistics.js"></script>
+  <script src="src/js/probability.js"></script>
+  <script src="src/js/distributions.js"></script>
+  <script src="src/js/hypothesis.js"></script>
+  <script src="src/js/regression.js"></script>
+  <script src="src/js/simulation.js"></script>
+  <script src="src/js/practice.js"></script>
+  <script src="src/js/exercises.js"></script>
+  <script src="src/js/formulas.js"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
+          .catch(err => console.error('ServiceWorker registration failed: ', err));
+      });
+    }
+  </script>
+</body>
+</html>
