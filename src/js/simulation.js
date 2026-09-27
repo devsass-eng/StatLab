@@ -90,7 +90,7 @@ function setSimType(type) {
   } else if (type === 'dice') {
     params.innerHTML = `
       <p class="section-title" style="margin-bottom:10px">Theoretical Probability</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="simulation-outcome-grid">
         ${[1,2,3,4,5,6].map(n=>`
           <div class="sim-result-card"><div class="label">P(${n})</div><div class="value">1/6</div><div class="pct">16.67%</div></div>
         `).join('')}
@@ -184,7 +184,7 @@ function renderDiceResults(container, r, n) {
       <div class="sim-counter">${n.toLocaleString()}</div>
       <div style="color:var(--text-secondary);font-size:13px">dice rolls</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+    <div class="simulation-outcome-grid simulation-outcome-summary">
       ${[1,2,3,4,5,6].map(face => `
         <div class="sim-result-card">
           <div class="label">Face ${face}</div>

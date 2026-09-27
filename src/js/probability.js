@@ -242,7 +242,7 @@ function numInput(id, label, val='', min='', step='any') {
 
 function calcPanel(title, icon, inputs, btnLabel, onCalc) {
   return `
-    <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:20px; align-items:start">
+    <div class="responsive-two-col probability-calc-grid">
       <div class="card">
         <h4 style="margin-bottom:16px; color:var(--accent)">${icon} ${title}</h4>
         ${inputs}
@@ -651,7 +651,7 @@ function calcRVDist() {
       <thead><tr><th>X</th><th>P(X=x)</th><th>Cumulative P</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+    <div class="responsive-results-grid" style="margin-top:16px">
       ${['Sum Σp = ' + pRound(sumP) + (Math.abs(sumP-1)<0.001?' ✅':' ⚠️'), 'E(X) = ' + pRound(ex), 'E(X²) = ' + pRound(ex2), 'Var(X) = ' + pRound(varx), 'SD(X) = ' + pRound(Math.sqrt(varx))].map(s=>`<div class="result-box" style="margin-top:0; padding:12px"><div style="font-size:13px">${s}</div></div>`).join('')}
     </div>
   </div>`);
@@ -825,7 +825,7 @@ function calcVarX() {
   const varx = ex2 - ex*ex;
   const sdx = Math.sqrt(varx);
   showResult(`<div class="card">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+    <div class="responsive-results-grid">
       ${[['E(X)', pRound(ex)], ['E(X²)', pRound(ex2)], ['Var(X)', pRound(varx)], ['SD(X)', pRound(sdx)]].map(([l,v])=>`
         <div class="result-box" style="margin-top:0"><div class="result-label">${l}</div><div class="result-value">${v}</div></div>
       `).join('')}
@@ -921,7 +921,7 @@ function calcBinStats() {
   const q = 1-p;
   const mu = n*p, varx = n*p*q, sdx = Math.sqrt(varx);
   showResult(`<div class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="responsive-results-grid">
       ${[['Mean (np)', pRound(mu)], ['q = 1−p', pRound(q)], ['Variance (npq)', pRound(varx)], ['SD (√npq)', pRound(sdx)]].map(([l,v])=>`
         <div class="result-box" style="margin-top:0"><div class="result-label">${l}</div><div class="result-value">${v}</div></div>
       `).join('')}
@@ -995,7 +995,7 @@ function calcPoiStats() {
   const lam = parseFloat(document.getElementById('poi-lam').value);
   if (isNaN(lam)) return;
   showResult(`<div class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="responsive-results-grid">
       ${[['Mean E(X)', pRound(lam)], ['Variance Var(X)', pRound(lam)], ['SD(X)', pRound(Math.sqrt(lam))], ['Parameter λ', pRound(lam)]].map(([l,v])=>`
         <div class="result-box" style="margin-top:0"><div class="result-label">${l}</div><div class="result-value">${v}</div></div>
       `).join('')}
@@ -1190,7 +1190,7 @@ function calcCov() {
   const sdy = Math.sqrt(yv.reduce((a,v)=>a+(v-my)**2,0)/n);
   const cor = cov / (sdx * sdy);
   showResult(`<div class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="responsive-results-grid">
       ${[['E(X)', pRound(mx)], ['E(Y)', pRound(my)], ['Cov(X,Y)', pRound(cov)], ['Corr(X,Y)', pRound(cor)]].map(([l,v])=>`
         <div class="result-box" style="margin-top:0"><div class="result-label">${l}</div><div class="result-value">${v}</div></div>
       `).join('')}
