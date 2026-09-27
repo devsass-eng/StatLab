@@ -1098,115 +1098,213 @@ Pass mark ≈ 53 marks.`
 ];
 
 // ── State ───────────────────────────────────────────────────
-let exFilter = { topic: 'All', difficulty: 'All' };
-let exCurrentId = null;
+let exFilter = { topic: 'All', difficulty: 'All', query: '' };
+let exCurrentId = exercisesData[0]?.id || null;
 let exSolutionVisible = false;
 
-// ── Render ───────────────────────────────────────────────────
+function escapeExerciseHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
+}
+
+function getFilteredExercises() {
+  const query = exFilter.query.trim().toLowerCase();
+  return exercisesData.filter(ex => {
+    const matchesTopic = exFilter.topic === 'All' || ex.topic === exFilter.topic;
+    const matchesDifficulty = exFilter.difficulty === 'All' || ex.difficulty === exFilter.difficulty;
+    const matchesQuery = !query || `${ex.title} ${ex.topic} ${ex.problem}`.toLowerCase().includes(query);
+    return matchesTopic && matchesDifficulty && matchesQuery;
+  });
+}
+
 function renderExercises(container) {
   container.innerHTML = `
-    <div class="page-header">
-      <h1>📖 Exercises</h1>
-      <p>30 full university-level worked problems. Try each question, then reveal the complete solution.</p>
-    </div>
-    <div style="display:grid; grid-template-columns:280px 1fr; gap:24px; align-items:start">
-      <!-- Sidebar -->
+    <header class="page-header exercise-page-header">
       <div>
-        <div class="card" style="margin-bottom:16px">
-          <p class="section-title" style="margin-bottom:10px">Filter by Topic</p>
-          ${['All','Probability','Statistics','Distributions'].map(t=>`
-            <button class="ex-filter-btn ${exFilter.topic===t?'active':''}"
-              onclick="setExFilter('topic','${t}')">${t}</button>
-          `).join('')}
-          <p class="section-title" style="margin-bottom:10px;margin-top:16px">Filter by Difficulty</p>
-          ${['All','easy','medium','hard'].map(d=>`
-            <button class="ex-filter-btn ${exFilter.difficulty===d?'active':''}"
-              onclick="setExFilter('difficulty','${d}')" style="text-transform:capitalize">${d}</button>
-          `).join('')}
-        </div>
-        <div id="ex-list-panel"></div>
+        <p class="exercise-eyebrow">Study library</p>
+        <h1>Worked Exercises</h1>
+        <p>Practice probability, statistics, and distributions with guided questions and complete solutions.</p>
       </div>
-      <!-- Main Panel -->
-      <div id="ex-main-panel">
-        <div class="card" style="text-align:center;padding:60px 40px;color:var(--text-muted)">
-          <div style="font-size:56px;margin-bottom:16px">📖</div>
-          <h3>Select an exercise from the list</h3>
-          <p style="margin-top:8px;font-size:13px">Use the filters to find exercises by topic or difficulty</p>
+      <div class="exercise-total-badge"><strong>${exercisesData.length}</strong><span>problems</span></div>
+    </header>
+
+    <section class="exercise-toolbar" aria-label="Find exercises">
+      <label class="exercise-search-wrap">
+        <span class="exercise-control-label">Search</span>
+        <input class="input-field" id="ex-search" type="search" placeholder="Search problems or topics" autocomplete="off">
+      </label>
+      <label class="exercise-filter-wrap">
+        <span class="exercise-control-label">Topic</span>
+        <select class="input-field" id="ex-topic-filter">
+          <option value="All">All topics</option>
+          <option value="Probability">Probability</option>
+          <option value="Statistics">Statistics</option>
+          <option value="Distributions">Distributions</option>
+        </select>
+      </label>
+      <label class="exercise-filter-wrap">
+        <span class="exercise-control-label">Difficulty</span>
+        <select class="input-field" id="ex-difficulty-filter">
+          <option value="All">All levels</option>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+    </section>
+
+    <div class="exercise-workspace">
+      <aside class="exercise-browser" aria-label="Exercise list">
+        <div class="exercise-browser-heading">
+          <div><h2>Exercise list</h2><p id="ex-count" aria-live="polite"></p></div>
+          <span class="exercise-book-icon" aria-hidden="true">${exercisesData.length}</span>
         </div>
-      </div>
+        <label class="exercise-mobile-picker">
+          <span class="exercise-control-label">Choose an exercise</span>
+          <select class="input-field" id="ex-mobile-select"></select>
+        </label>
+        <div class="exercise-list" id="ex-list-panel" aria-live="polite"></div>
+      </aside>
+      <section class="exercise-detail-panel" id="ex-main-panel"></section>
     </div>
   `;
+
+  document.getElementById('ex-topic-filter').value = exFilter.topic;
+  document.getElementById('ex-difficulty-filter').value = exFilter.difficulty;
+  document.getElementById('ex-search').value = exFilter.query;
+  document.getElementById('ex-search').addEventListener('input', event => {
+    exFilter.query = event.target.value;
+    renderExerciseList();
+  });
+  document.getElementById('ex-topic-filter').addEventListener('change', event => setExFilter('topic', event.target.value));
+  document.getElementById('ex-difficulty-filter').addEventListener('change', event => setExFilter('difficulty', event.target.value));
+  document.getElementById('ex-mobile-select').addEventListener('change', event => openExercise(event.target.value));
+
   renderExerciseList();
 }
 
-function setExFilter(key, val) {
-  exFilter[key] = val;
-  document.querySelectorAll('.ex-filter-btn').forEach(b=>{
-    if (b.textContent.trim()===val||b.textContent.trim()===val) {
-      const isTopicBtn = ['All','Probability','Statistics','Distributions'].includes(b.textContent.trim());
-      const isDiffBtn  = ['All','easy','medium','hard'].includes(b.textContent.trim());
-      b.classList.toggle('active',
-        (key==='topic' && isTopicBtn && b.textContent.trim()===val) ||
-        (key==='difficulty' && isDiffBtn && b.textContent.trim()===val) ||
-        (exFilter.topic===b.textContent.trim()) || (exFilter.difficulty===b.textContent.trim())
-      );
-    }
-  });
+function setExFilter(key, value) {
+  exFilter[key] = value;
+  renderExerciseList();
+}
+
+function resetExerciseFilters() {
+  exFilter = { topic: 'All', difficulty: 'All', query: '' };
+  const search = document.getElementById('ex-search');
+  if (search) search.value = '';
+  const topic = document.getElementById('ex-topic-filter');
+  const difficulty = document.getElementById('ex-difficulty-filter');
+  if (topic) topic.value = 'All';
+  if (difficulty) difficulty.value = 'All';
   renderExerciseList();
 }
 
 function renderExerciseList() {
-  const filtered = exercisesData.filter(ex=>{
-    const tOk = exFilter.topic==='All' || ex.topic===exFilter.topic;
-    const dOk = exFilter.difficulty==='All' || ex.difficulty===exFilter.difficulty;
-    return tOk && dOk;
-  });
-  const diffColor = { easy:'var(--accent)', medium:'#f59e0b', hard:'var(--wrong-color)' };
+  const filtered = getFilteredExercises();
+  const count = document.getElementById('ex-count');
   const list = document.getElementById('ex-list-panel');
-  if(!list) return;
-  list.innerHTML = filtered.map(ex=>`
-    <div class="ex-list-item ${exCurrentId===ex.id?'active':''}" onclick="openExercise('${ex.id}')">
-      <div style="font-size:12px;font-weight:700;color:${diffColor[ex.difficulty]||'var(--text-muted)'};text-transform:uppercase;margin-bottom:2px">${ex.difficulty} • ${ex.topic}</div>
-      <div style="font-size:13px;font-weight:600;color:var(--text-primary)">${ex.title}</div>
-    </div>
-  `).join('') || '<div class="card"><p style="color:var(--text-muted)">No exercises match filters.</p></div>';
+  const picker = document.getElementById('ex-mobile-select');
+  if (!list || !picker) return;
+
+  if (!filtered.some(ex => ex.id === exCurrentId)) {
+    exCurrentId = filtered[0]?.id || null;
+    exSolutionVisible = false;
+  }
+
+  if (count) count.textContent = `${filtered.length} of ${exercisesData.length} exercises`;
+  list.innerHTML = filtered.length ? filtered.map((ex, index) => `
+    <button type="button" class="exercise-list-item ${exCurrentId === ex.id ? 'active' : ''}" onclick="openExercise('${ex.id}')" aria-pressed="${exCurrentId === ex.id}">
+      <span class="exercise-list-number">${String(index + 1).padStart(2, '0')}</span>
+      <span class="exercise-list-copy">
+        <span class="exercise-list-title">${escapeExerciseHTML(ex.title)}</span>
+        <span class="exercise-list-subtitle">${escapeExerciseHTML(ex.topic)}</span>
+      </span>
+      <span class="exercise-difficulty ${ex.difficulty}">${ex.difficulty}</span>
+    </button>
+  `).join('') : '<div class="exercise-no-results">No exercises match your search. Try changing a filter.</div>';
+
+  picker.innerHTML = filtered.length
+    ? filtered.map((ex, index) => `<option value="${ex.id}">${String(index + 1).padStart(2, '0')} · ${escapeExerciseHTML(ex.title)}</option>`).join('')
+    : '<option value="">No matching exercises</option>';
+  picker.disabled = filtered.length === 0;
+  if (exCurrentId) picker.value = exCurrentId;
+
+  renderExerciseDetail(filtered);
 }
 
 function openExercise(id) {
+  if (!exercisesData.some(ex => ex.id === id)) return;
   exCurrentId = id;
   exSolutionVisible = false;
-  const ex = exercisesData.find(e=>e.id===id);
-  if(!ex) return;
-  const diffColor = { easy:'var(--accent)', medium:'#f59e0b', hard:'var(--wrong-color)' };
-  document.getElementById('ex-main-panel').innerHTML = `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div>
-          <span style="font-size:11px;font-weight:700;color:${diffColor[ex.difficulty]};text-transform:uppercase;background:${diffColor[ex.difficulty]}22;padding:4px 10px;border-radius:20px">${ex.difficulty}</span>
-          <span style="margin-left:8px;font-size:11px;color:var(--text-muted)">${ex.topic}</span>
-        </div>
-      </div>
-      <h3 style="margin-bottom:20px;color:var(--text-primary)">${ex.title}</h3>
-      <div class="meaning-panel" style="margin-bottom:20px">
-        <div class="meaning-title">📋 Question</div>
-        <pre style="white-space:pre-wrap;font-family:inherit;margin:0;font-size:14px;line-height:1.7">${ex.problem}</pre>
-      </div>
-      <button class="primary-btn" id="ex-reveal-btn" onclick="toggleExSolution('${id}')" style="width:100%">
-        🔍 Reveal Solution
-      </button>
-      <div id="ex-solution-box" class="hidden" style="margin-top:20px">
-        <div class="steps-panel" style="font-size:13.5px;line-height:1.8">${ex.solution}</div>
-      </div>
-    </div>
-  `;
   renderExerciseList();
 }
 
-function toggleExSolution(id) {
+function renderExerciseDetail(filtered = getFilteredExercises()) {
+  const panel = document.getElementById('ex-main-panel');
+  if (!panel) return;
+  const ex = filtered.find(item => item.id === exCurrentId);
+  if (!ex) {
+    panel.innerHTML = `
+      <div class="exercise-empty-state">
+        <span class="exercise-empty-icon" aria-hidden="true">∑</span>
+        <h2>No exercises found</h2>
+        <p>Try a different search or reset the topic and difficulty filters.</p>
+        <button class="secondary-btn" type="button" onclick="resetExerciseFilters()">Reset filters</button>
+      </div>
+    `;
+    return;
+  }
+
+  const position = filtered.findIndex(item => item.id === ex.id);
+  panel.innerHTML = `
+    <article class="exercise-detail card">
+      <div class="exercise-detail-meta">
+        <span class="exercise-topic-label">${escapeExerciseHTML(ex.topic)}</span>
+        <span class="exercise-difficulty ${ex.difficulty}">${ex.difficulty}</span>
+      </div>
+      <p class="exercise-question-index">Problem ${String(exercisesData.indexOf(ex) + 1).padStart(2, '0')}</p>
+      <h2 class="exercise-detail-title">${escapeExerciseHTML(ex.title)}</h2>
+      <p class="exercise-detail-hint">Read through the question, then reveal the worked solution when you’re ready.</p>
+
+      <section class="exercise-question-block" aria-labelledby="exercise-question-heading">
+        <div class="exercise-section-heading"><span>01</span><h3 id="exercise-question-heading">Question</h3></div>
+        <pre class="exercise-problem">${escapeExerciseHTML(ex.problem)}</pre>
+      </section>
+
+      <button class="exercise-reveal-btn" id="ex-reveal-btn" type="button" onclick="toggleExSolution()" aria-expanded="${exSolutionVisible}" aria-controls="ex-solution-box">
+        <span>${exSolutionVisible ? 'Hide worked solution' : 'Reveal worked solution'}</span>
+        <span class="exercise-reveal-icon" aria-hidden="true">${exSolutionVisible ? '−' : '+'}</span>
+      </button>
+
+      <section class="exercise-solution-block ${exSolutionVisible ? '' : 'hidden'}" id="ex-solution-box" aria-labelledby="exercise-solution-heading">
+        <div class="exercise-section-heading"><span>02</span><h3 id="exercise-solution-heading">Worked solution</h3></div>
+        <pre class="exercise-solution">${escapeExerciseHTML(ex.solution)}</pre>
+      </section>
+
+      <nav class="exercise-pagination" aria-label="Exercise navigation">
+        <button class="secondary-btn" type="button" onclick="moveExercise(-1)" ${position <= 0 ? 'disabled' : ''}>Previous</button>
+        <span>${position + 1} <span>of</span> ${filtered.length}</span>
+        <button class="secondary-btn" type="button" onclick="moveExercise(1)" ${position >= filtered.length - 1 ? 'disabled' : ''}>Next</button>
+      </nav>
+    </article>
+  `;
+}
+
+function moveExercise(direction) {
+  const filtered = getFilteredExercises();
+  const position = filtered.findIndex(ex => ex.id === exCurrentId);
+  const next = filtered[position + direction];
+  if (next) openExercise(next.id);
+}
+
+function toggleExSolution() {
   exSolutionVisible = !exSolutionVisible;
   const box = document.getElementById('ex-solution-box');
-  const btn = document.getElementById('ex-reveal-btn');
-  if (!box||!btn) return;
+  const button = document.getElementById('ex-reveal-btn');
+  if (!box || !button) return;
   box.classList.toggle('hidden', !exSolutionVisible);
-  btn.textContent = exSolutionVisible ? '🙈 Hide Solution' : '🔍 Reveal Solution';
+  button.setAttribute('aria-expanded', String(exSolutionVisible));
+  button.querySelector('span:first-child').textContent = exSolutionVisible ? 'Hide worked solution' : 'Reveal worked solution';
+  button.querySelector('.exercise-reveal-icon').textContent = exSolutionVisible ? '−' : '+';
 }
