@@ -19,12 +19,12 @@ function renderDistributions(container) {
           <div class="dist-selector">
             <p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px">Continuous</p>
             ${[['normal','🔔 Normal'],['uniform','▬ Uniform'],['exponential','📉 Exponential'],['studentt','🎓 Student\'s t'],['chisquare','🧮 Chi-Square'],['fdist','📈 F-Dist']].map(([id,label])=>`
-              <button class="dist-type-btn ${distType===id?'active':''}" onclick="switchDist('${id}')">${label} <span style="font-size:11px">${distType===id?'✓':''}</span></button>
+              <button class="dist-type-btn ${distType===id?'active':''}" data-dist-type="${id}" onclick="switchDist('${id}')">${label} <span style="font-size:11px">${distType===id?'✓':''}</span></button>
             `).join('')}
             <hr class="divider"/>
             <p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px">Discrete</p>
             ${[['binomial','🎯 Binomial'],['poisson','λ Poisson'],['geometric','📐 Geometric']].map(([id,label])=>`
-              <button class="dist-type-btn ${distType===id?'active':''}" onclick="switchDist('${id}')">${label} <span style="font-size:11px">${distType===id?'✓':''}</span></button>
+              <button class="dist-type-btn ${distType===id?'active':''}" data-dist-type="${id}" onclick="switchDist('${id}')">${label} <span style="font-size:11px">${distType===id?'✓':''}</span></button>
             `).join('')}
           </div>
         </div>
@@ -50,7 +50,7 @@ function renderDistributions(container) {
 function switchDist(type) {
   distType = type;
   document.querySelectorAll('.dist-type-btn').forEach(btn => {
-    const matches = btn.textContent.toLowerCase().includes(type.toLowerCase());
+    const matches = btn.dataset.distType === type;
     btn.classList.toggle('active', matches);
     const span = btn.querySelector('span');
     if (span) span.textContent = matches ? '✓' : '';
@@ -70,7 +70,27 @@ function switchDist(type) {
     poisson:     renderPoissonParams,
     geometric:   renderGeometricParams,
   };
-  if (renderers[type]) renderers[type](paramsCard);
+  const calculators = {
+    normal: calcNormal,
+    uniform: calcUniform,
+    exponential: calcExponential,
+    studentt: calcStudentT,
+    chisquare: calcChiSquare,
+    fdist: calcFDist,
+    binomial: calcBinomial,
+    poisson: calcPoisson,
+    geometric: calcGeometric,
+  };
+  if (distChart) {
+    distChart.destroy();
+    distChart = null;
+  }
+  const resultArea = document.getElementById('dist-result-area');
+  if (resultArea) resultArea.innerHTML = '';
+  if (renderers[type]) {
+    renderers[type](paramsCard);
+    calculators[type]?.();
+  }
 }
 
 // ── Param input helper ───────────────────────────────────────
