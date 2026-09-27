@@ -8,6 +8,8 @@ let statsDataMode = 'sample';
 let statsCurrentTab = 'results';
 let statsChart = null;
 let statsChartType = 'bar';
+let statsDistributionChart = null;
+let statsDistributionChartType = 'bar';
 
 function renderStatistics(container) {
   container.innerHTML = `
@@ -72,6 +74,10 @@ function clearStats() {
   document.getElementById('stats-distribution-table').classList.add('hidden');
   statsData = [];
   statsGroupedRows = null;
+  if (statsDistributionChart) {
+    statsDistributionChart.destroy();
+    statsDistributionChart = null;
+  }
 }
 
 function parseData(input) {
@@ -186,7 +192,15 @@ function renderDistributionTable(container) {
       <article><span>${modeName} variance</span><strong>${r(variance)}</strong><small>${statsDataMode === 'sample' ? 'Σf(x − x̄)² / (n − 1)' : 'Σf(x − μ)² / n'}</small></article>
       <article><span>${modeName} standard deviation</span><strong>${r(stdDev)}</strong><small>√variance</small></article>
     </div>
+    <div class="stats-data-chart-section">
+      <div class="stats-summary-heading"><h3>Visualize your data</h3></div>
+      <div class="stats-data-chart-controls" role="group" aria-label="Distribution chart type">
+        ${[['bar','Bar chart'],['pie','Pie chart'],['histogram','Histogram']].map(([type,label]) => `<button type="button" class="chart-type-btn ${statsDistributionChartType === type ? 'active' : ''}" aria-pressed="${statsDistributionChartType === type}" onclick="changeDistributionChart('${type}')">${label}</button>`).join('')}
+      </div>
+      <div class="stats-data-chart-wrap"><canvas id="stats-distribution-chart" role="img" aria-label="${statsDistributionChartType} chart of entered data frequencies"></canvas></div>
+    </div>
   `;
+  renderDistributionChart(rows);
   const summaryMode = document.getElementById('stats-data-mode-summary');
   if (summaryMode) summaryMode.addEventListener('change', () => {
     statsDataMode = summaryMode.value;
@@ -194,6 +208,72 @@ function renderDistributionTable(container) {
     if (topMode) topMode.value = statsDataMode;
     renderDistributionTable(container);
     if (!document.getElementById('stats-output')?.classList.contains('hidden')) switchStatsTab(statsCurrentTab);
+  });
+}
+
+function changeDistributionChart(type) {
+  if (!['bar', 'pie', 'histogram'].includes(type)) return;
+  statsDistributionChartType = type;
+  const section = document.getElementById('stats-distribution-table');
+  if (section) renderDistributionTable(section);
+}
+
+function renderDistributionChart(rows) {
+  if (statsDistributionChart) {
+    statsDistributionChart.destroy();
+    statsDistributionChart = null;
+  }
+  const canvas = document.getElementById('stats-distribution-chart');
+  if (!canvas || !window.Chart) return;
+
+  let labels = rows.map(row => String(row.label));
+  let values = rows.map(row => row.frequency);
+  if (statsDistributionChartType === 'histogram') {
+    if (statsGroupedRows) {
+      labels = statsGroupedRows.map(row => `${r(row.lower)}–${r(row.upper)}`);
+      values = statsGroupedRows.map(row => row.frequency);
+    } else {
+      const min = Math.min(...statsData);
+      const max = Math.max(...statsData);
+      if (min === max) {
+        labels = [`${r(min)}`];
+        values = [statsData.length];
+      } else {
+        const bins = buildHistogramBins(statsData, Math.min(8, Math.max(3, Math.ceil(Math.sqrt(statsData.length)))));
+        labels = bins.map(bin => `${r(bin.from, 2)}–${r(bin.to, 2)}`);
+        values = bins.map(bin => bin.count);
+      }
+    }
+  }
+
+  const isDark = document.body.classList.contains('dark-mode');
+  const labelColor = isDark ? '#b9b5dc' : '#5b5380';
+  const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)';
+  const palette = labels.map((_, index) => `hsl(${205 + (index * 31) % 145}, 74%, ${isDark ? 63 : 48}%)`);
+  const isPie = statsDistributionChartType === 'pie';
+  statsDistributionChart = new Chart(canvas, {
+    type: isPie ? 'pie' : 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: statsDistributionChartType === 'histogram' ? 'Frequency' : 'Frequency (f)',
+        data: values,
+        backgroundColor: isPie ? palette : 'rgba(8,127,240,.72)',
+        borderColor: isPie ? (isDark ? '#13132a' : '#ffffff') : '#087ff0',
+        borderWidth: isPie ? 2 : 1,
+        borderRadius: isPie ? 0 : 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: isPie, position: 'bottom', labels: { color: labelColor, boxWidth: 12, padding: 14 } } },
+      ...(isPie ? {} : { scales: {
+        x: { grid: { display: false }, ticks: { color: labelColor, maxRotation: 45, minRotation: 0 } },
+        y: { beginAtZero: true, ticks: { precision: 0, color: labelColor }, grid: { color: gridColor } }
+      }})
+    }
   });
 }
 
