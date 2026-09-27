@@ -1100,7 +1100,14 @@ Pass mark ≈ 53 marks.`
 // ── State ───────────────────────────────────────────────────
 let exFilter = { topic: 'All', difficulty: 'All', query: '' };
 let exCurrentId = exercisesData[0]?.id || null;
-let exSolutionVisible = false;
+let exStepIndex = 0;
+let exCompleted = JSON.parse(localStorage.getItem('statlab-exercises-completed') || '[]');
+
+function getExerciseSteps(solution) {
+  return String(solution).replace(/^SOLUTION\s*/i, '').split(/\n\s*\n+/)
+    .map(step => step.trim())
+    .filter(step => step && !/^[^\p{L}\p{N}]+$/u.test(step));
+}
 
 function escapeExerciseHTML(value) {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -1126,7 +1133,7 @@ function renderExercises(container) {
         <h1>Worked Exercises</h1>
         <p>Practice probability, statistics, and distributions with guided questions and complete solutions.</p>
       </div>
-      <div class="exercise-total-badge"><strong>${exercisesData.length}</strong><span>problems</span></div>
+      <div class="exercise-total-badge"><strong>${exCompleted.length}</strong><span>of ${exercisesData.length} completed</span></div>
     </header>
 
     <section class="exercise-toolbar" aria-label="Find exercises">
@@ -1209,10 +1216,12 @@ function renderExerciseList() {
 
   if (!filtered.some(ex => ex.id === exCurrentId)) {
     exCurrentId = filtered[0]?.id || null;
-    exSolutionVisible = false;
+    exStepIndex = 0;
   }
 
   if (count) count.textContent = `${filtered.length} of ${exercisesData.length} exercises`;
+  const totalBadge = document.querySelector('.exercise-total-badge');
+  if (totalBadge) totalBadge.innerHTML = `<strong>${exCompleted.length}</strong><span>of ${exercisesData.length} completed</span>`;
   list.innerHTML = filtered.length ? filtered.map((ex, index) => `
     <button type="button" class="exercise-list-item ${exCurrentId === ex.id ? 'active' : ''}" onclick="openExercise('${ex.id}')" aria-pressed="${exCurrentId === ex.id}">
       <span class="exercise-list-number">${String(index + 1).padStart(2, '0')}</span>
@@ -1220,7 +1229,7 @@ function renderExerciseList() {
         <span class="exercise-list-title">${escapeExerciseHTML(ex.title)}</span>
         <span class="exercise-list-subtitle">${escapeExerciseHTML(ex.topic)}</span>
       </span>
-      <span class="exercise-difficulty ${ex.difficulty}">${ex.difficulty}</span>
+      <span class="exercise-list-status ${exCompleted.includes(ex.id) ? 'complete' : ''}">${exCompleted.includes(ex.id) ? 'Done' : ex.difficulty}</span>
     </button>
   `).join('') : '<div class="exercise-no-results">No exercises match your search. Try changing a filter.</div>';
 
@@ -1236,7 +1245,7 @@ function renderExerciseList() {
 function openExercise(id) {
   if (!exercisesData.some(ex => ex.id === id)) return;
   exCurrentId = id;
-  exSolutionVisible = false;
+  exStepIndex = 0;
   renderExerciseList();
 }
 
@@ -1257,6 +1266,9 @@ function renderExerciseDetail(filtered = getFilteredExercises()) {
   }
 
   const position = filtered.findIndex(item => item.id === ex.id);
+  const steps = getExerciseSteps(ex.solution);
+  const visibleSteps = Math.min(exStepIndex, steps.length);
+  const completed = exCompleted.includes(ex.id);
   panel.innerHTML = `
     <article class="exercise-detail card">
       <div class="exercise-detail-meta">
@@ -1265,21 +1277,24 @@ function renderExerciseDetail(filtered = getFilteredExercises()) {
       </div>
       <p class="exercise-question-index">Problem ${String(exercisesData.indexOf(ex) + 1).padStart(2, '0')}</p>
       <h2 class="exercise-detail-title">${escapeExerciseHTML(ex.title)}</h2>
-      <p class="exercise-detail-hint">Read through the question, then reveal the worked solution when you’re ready.</p>
+      <p class="exercise-detail-hint">Try the problem first, then reveal the solution one step at a time.</p>
 
       <section class="exercise-question-block" aria-labelledby="exercise-question-heading">
         <div class="exercise-section-heading"><span>01</span><h3 id="exercise-question-heading">Question</h3></div>
         <pre class="exercise-problem">${escapeExerciseHTML(ex.problem)}</pre>
       </section>
 
-      <button class="exercise-reveal-btn" id="ex-reveal-btn" type="button" onclick="toggleExSolution()" aria-expanded="${exSolutionVisible}" aria-controls="ex-solution-box">
-        <span>${exSolutionVisible ? 'Hide worked solution' : 'Reveal worked solution'}</span>
-        <span class="exercise-reveal-icon" aria-hidden="true">${exSolutionVisible ? '−' : '+'}</span>
-      </button>
-
-      <section class="exercise-solution-block ${exSolutionVisible ? '' : 'hidden'}" id="ex-solution-box" aria-labelledby="exercise-solution-heading">
-        <div class="exercise-section-heading"><span>02</span><h3 id="exercise-solution-heading">Worked solution</h3></div>
-        <pre class="exercise-solution">${escapeExerciseHTML(ex.solution)}</pre>
+      <section class="exercise-solution-block" id="ex-solution-box" aria-labelledby="exercise-solution-heading">
+        <div class="exercise-section-heading"><span>02</span><h3 id="exercise-solution-heading">Work through it</h3></div>
+        <div class="exercise-step-progress" aria-live="polite">${visibleSteps ? `Step ${visibleSteps} of ${steps.length}` : 'Solution hidden'}</div>
+        <div class="exercise-step-list">${steps.slice(0, visibleSteps).map((step, index) => `
+          <article class="exercise-step-card"><span class="exercise-step-number">${String(index + 1).padStart(2, '0')}</span><pre>${escapeExerciseHTML(step)}</pre></article>
+        `).join('')}${visibleSteps === steps.length && steps.length ? `<div class="exercise-finish-note">${completed ? 'Completed — nice work revisiting this problem.' : 'That’s the full solution. Mark this exercise complete when you’re ready.'}</div>` : ''}</div>
+        <div class="exercise-step-actions">
+          ${visibleSteps < steps.length ? `<button class="primary-btn" type="button" onclick="revealNextExerciseStep()">${visibleSteps ? 'Show next step' : 'Reveal first step'} <span aria-hidden="true">→</span></button>` : ''}
+          ${visibleSteps === steps.length && steps.length && !completed ? `<button class="secondary-btn" type="button" onclick="completeExercise('${ex.id}')">Mark complete</button>` : ''}
+          ${visibleSteps > 0 && visibleSteps < steps.length ? `<button class="secondary-btn" type="button" onclick="showAllExerciseSteps()">Show all steps</button>` : ''}
+        </div>
       </section>
 
       <nav class="exercise-pagination" aria-label="Exercise navigation">
@@ -1298,13 +1313,23 @@ function moveExercise(direction) {
   if (next) openExercise(next.id);
 }
 
-function toggleExSolution() {
-  exSolutionVisible = !exSolutionVisible;
-  const box = document.getElementById('ex-solution-box');
-  const button = document.getElementById('ex-reveal-btn');
-  if (!box || !button) return;
-  box.classList.toggle('hidden', !exSolutionVisible);
-  button.setAttribute('aria-expanded', String(exSolutionVisible));
-  button.querySelector('span:first-child').textContent = exSolutionVisible ? 'Hide worked solution' : 'Reveal worked solution';
-  button.querySelector('.exercise-reveal-icon').textContent = exSolutionVisible ? '−' : '+';
+function revealNextExerciseStep() {
+  const exercise = exercisesData.find(item => item.id === exCurrentId);
+  if (!exercise) return;
+  exStepIndex = Math.min(exStepIndex + 1, getExerciseSteps(exercise.solution).length);
+  renderExerciseDetail();
+}
+
+function showAllExerciseSteps() {
+  const exercise = exercisesData.find(item => item.id === exCurrentId);
+  if (!exercise) return;
+  exStepIndex = getExerciseSteps(exercise.solution).length;
+  renderExerciseDetail();
+}
+
+function completeExercise(id) {
+  if (!exercisesData.some(item => item.id === id) || exCompleted.includes(id)) return;
+  exCompleted.push(id);
+  localStorage.setItem('statlab-exercises-completed', JSON.stringify(exCompleted));
+  renderExerciseList();
 }

@@ -5,6 +5,9 @@
 let practiceTopic = 'probability';
 let practiceDiff  = 'medium';
 let practiceScore = JSON.parse(localStorage.getItem('statlab-scores') || '{}');
+const savedPracticeSession = JSON.parse(localStorage.getItem('statlab-practice-session') || '{}');
+practiceTopic = savedPracticeSession.topic || practiceTopic;
+practiceDiff = savedPracticeSession.difficulty || practiceDiff;
 let currentQuestion = null;
 let questionAnswered = false;
 
@@ -503,7 +506,10 @@ function renderPractice(container) {
             `).join('')}
           </div>
         </div>
-        <button class="primary-btn" onclick="loadPracticeQuestion()" style="width:100%">🎲 New Random Question</button>
+        <div class="practice-actions">
+          <button class="primary-btn" onclick="loadPracticeQuestion()">New question <span aria-hidden="true">?</span></button>
+          <button class="secondary-btn" onclick="continuePractice()">Continue practice</button>
+        </div>
       </div>
     </div>
 
@@ -514,12 +520,22 @@ function renderPractice(container) {
       </div>
     </div>
 
-    <div style="margin-top:32px">
-      <p class="section-title" style="margin-bottom:14px">📊 Your Performance</p>
-      <div class="score-tracker" id="score-tracker"></div>
-      <button class="secondary-btn" style="margin-top:14px" onclick="resetScores()">Reset All Scores</button>
-    </div>
+    <section class="practice-progress-panel" aria-labelledby="practice-progress-title">
+      <div class="practice-progress-heading">
+        <div><p class="exercise-eyebrow">Your learning</p><h2 id="practice-progress-title">Practice progress</h2><p class="practice-progress-subtitle">Your results are saved on this device.</p></div>
+        <button class="secondary-btn" onclick="resetScores()">Reset progress</button>
+      </div>
+      <div class="practice-overview" id="practice-overview"></div>
+      <div class="practice-topic-progress" id="practice-topic-progress"></div>
+      <div class="practice-score-details" id="practice-score-details">
+        <p class="section-title" style="margin:8px 0 14px">By topic and difficulty</p>
+        <div class="score-tracker" id="score-tracker"></div>
+      </div>
+    </section>
   `;
+  document.querySelectorAll('.topic-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(practiceTopic.slice(0, 4))));
+  document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(practiceDiff)));
+  renderPracticeProgress();
   renderScoreTracker();
 }
 
@@ -550,7 +566,13 @@ function loadPracticeQuestion() {
     `;
     return;
   }
-  currentQuestion = pool[Math.floor(Math.random() * pool.length)];
+  let questionIndex = Math.floor(Math.random() * pool.length);
+  if (pool.length > 1 && savedPracticeSession.topic === practiceTopic && savedPracticeSession.difficulty === practiceDiff && questionIndex === savedPracticeSession.questionIndex) {
+    questionIndex = (questionIndex + 1) % pool.length;
+  }
+  currentQuestion = pool[questionIndex];
+  Object.assign(savedPracticeSession, { topic: practiceTopic, difficulty: practiceDiff, questionIndex });
+  localStorage.setItem('statlab-practice-session', JSON.stringify(savedPracticeSession));
   questionAnswered = false;
   document.getElementById('practice-question-area').innerHTML = `
     <div class="question-card">
@@ -570,6 +592,15 @@ function loadPracticeQuestion() {
       <div class="feedback-box" id="practice-feedback"></div>
     </div>
   `;
+}
+
+function continuePractice() {
+  practiceTopic = savedPracticeSession.topic || practiceTopic;
+  practiceDiff = savedPracticeSession.difficulty || practiceDiff;
+  document.querySelectorAll('.topic-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(practiceTopic.slice(0, 4))));
+  document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(practiceDiff)));
+  loadPracticeQuestion();
+  document.getElementById('practice-question-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function answerQuestion(chosen) {
@@ -596,6 +627,37 @@ function answerQuestion(chosen) {
     <pre style="white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px;line-height:1.8">${currentQuestion.explanation}</pre>
   `;
   renderScoreTracker();
+  renderPracticeProgress();
+}
+
+function renderPracticeProgress() {
+  const overview = document.getElementById('practice-overview');
+  const topicPanel = document.getElementById('practice-topic-progress');
+  if (!overview || !topicPanel) return;
+  const entries = Object.entries(practiceScore).filter(([, score]) => score && score.total > 0);
+  const totals = entries.reduce((sum, [, score]) => ({ correct: sum.correct + score.correct, total: sum.total + score.total }), { correct: 0, total: 0 });
+  const accuracy = totals.total ? Math.round(totals.correct / totals.total * 100) : 0;
+  const studied = new Set(entries.map(([key]) => key.split('-')[0])).size;
+  overview.innerHTML = `
+    <article class="practice-stat-card"><span>Questions answered</span><strong>${totals.total}</strong></article>
+    <article class="practice-stat-card"><span>Overall accuracy</span><strong>${accuracy}%</strong><div class="practice-stat-meter"><i style="width:${accuracy}%"></i></div></article>
+    <article class="practice-stat-card"><span>Topics practiced</span><strong>${studied} <small>of 4</small></strong></article>
+  `;
+  const topics = ['probability', 'statistics', 'distributions', 'combinations'];
+  const labels = { probability: 'Probability', statistics: 'Statistics', distributions: 'Distributions', combinations: 'Combinations' };
+  topicPanel.innerHTML = topics.map(topic => {
+    const scores = entries.filter(([key]) => key.startsWith(`${topic}-`)).map(([, score]) => score);
+    const total = scores.reduce((sum, score) => sum + score.total, 0);
+    const correct = scores.reduce((sum, score) => sum + score.correct, 0);
+    const pct = total ? Math.round(correct / total * 100) : 0;
+    return `<article class="practice-topic-card"><div class="practice-topic-card-heading"><strong>${labels[topic]}</strong><span>${total ? `${pct}% · ${total} ${total === 1 ? 'question' : 'questions'}` : 'Not started'}</span></div><div class="practice-topic-meter"><i style="width:${pct}%"></i></div><button type="button" class="practice-review-link" onclick="reviewPracticeTopic('${topic}')">${total ? 'Practice this topic' : 'Start this topic'} <span aria-hidden="true">→</span></button></article>`;
+  }).join('');
+}
+
+function reviewPracticeTopic(topic) {
+  setPracticeTopic(topic);
+  loadPracticeQuestion();
+  document.getElementById('practice-question-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderScoreTracker() {
@@ -642,5 +704,6 @@ function resetScores() {
   if (!confirm('Reset all practice scores?')) return;
   practiceScore = {};
   localStorage.removeItem('statlab-scores');
+  renderPracticeProgress();
   renderScoreTracker();
 }
