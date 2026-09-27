@@ -3,6 +3,8 @@
 // ============================================================
 
 let statsData = [];
+let statsGroupedRows = null;
+let statsDataMode = 'sample';
 let statsCurrentTab = 'results';
 let statsChart = null;
 let statsChartType = 'bar';
@@ -17,13 +19,23 @@ function renderStatistics(container) {
     <div class="card stats-full" style="margin-bottom:24px">
       <p class="section-title">Enter Data</p>
       <textarea class="data-input-area" id="stats-data-input"
-        placeholder="Enter numbers separated by commas or spaces, e.g: 12, 15, 18, 20, 20, 22, 25"></textarea>
+        placeholder="Raw values: 2, 2, 2, 4, 4, 6&#10;Grouped data: 0-9:3, 10-19:5, 20-29:2"></textarea>
+      <div class="stats-input-options">
+        <label class="stats-data-mode-label" for="stats-data-mode">Data represents</label>
+        <select class="input-field stats-data-mode" id="stats-data-mode">
+          <option value="sample">A sample</option>
+          <option value="population">A population</option>
+        </select>
+        <span class="stats-auto-note">The distribution table updates as you type.</span>
+      </div>
       <div class="btn-group" style="margin-top:12px">
         <button class="primary-btn" onclick="computeStats()">Calculate ∑</button>
         <button class="secondary-btn" onclick="clearStats()">Clear</button>
         <button class="secondary-btn" onclick="loadSampleData()">Load Sample Data</button>
       </div>
     </div>
+
+    <section id="stats-distribution-table" class="stats-distribution-card hidden" aria-live="polite"></section>
 
     <div id="stats-output" class="hidden">
       <div class="tabs">
@@ -37,31 +49,152 @@ function renderStatistics(container) {
       <div id="stats-tab-content"></div>
     </div>
   `;
+  const input = document.getElementById('stats-data-input');
+  const mode = document.getElementById('stats-data-mode');
+  if (input) input.addEventListener('input', refreshStatsFromInput);
+  if (mode) {
+    mode.value = statsDataMode;
+    mode.addEventListener('change', () => {
+    statsDataMode = mode.value;
+    refreshStatsFromInput();
+    });
+  }
 }
 
 function loadSampleData() {
   document.getElementById('stats-data-input').value = '12, 15, 18, 20, 20, 22, 25, 28, 30, 18, 22, 15';
+  refreshStatsFromInput();
 }
 
 function clearStats() {
   document.getElementById('stats-data-input').value = '';
   document.getElementById('stats-output').classList.add('hidden');
+  document.getElementById('stats-distribution-table').classList.add('hidden');
   statsData = [];
+  statsGroupedRows = null;
 }
 
 function parseData(input) {
   return input.split(/[\s,;]+/).map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
 }
 
+function parseStatsDataset(input) {
+  const text = input.trim();
+  if (!text) return { data: [], groupedRows: null };
+  const tokens = text.split(/[,;\n]+/).map(token => token.trim()).filter(Boolean);
+  const groupedPattern = /^(-?\d+(?:\.\d+)?)\s*(?:-|–|—|to)\s*(-?\d+(?:\.\d+)?)\s*[:=]\s*(\d+)$/i;
+  const looksGrouped = tokens.some(token => /[:=]/.test(token) && /(?:-|–|—|to)/i.test(token));
+  if (looksGrouped) {
+    const rows = tokens.map(token => {
+      const match = token.match(groupedPattern);
+      if (!match) return null;
+      const lower = Number(match[1]);
+      const upper = Number(match[2]);
+      const frequency = Number(match[3]);
+      if (upper < lower || frequency < 1 || !Number.isSafeInteger(frequency)) return null;
+      return { lower, upper, frequency, midpoint: (lower + upper) / 2 };
+    });
+    if (rows.some(row => !row)) return { data: [], groupedRows: null, error: 'For grouped data, enter each class as interval:frequency, for example 0-9:3, 10-19:5.' };
+    const total = rows.reduce((sum, row) => sum + row.frequency, 0);
+    if (total > 10000) return { data: [], groupedRows: null, error: 'Grouped frequencies must total 10,000 or fewer values.' };
+    return { data: rows.flatMap(row => Array(row.frequency).fill(row.midpoint)), groupedRows: rows };
+  }
+  return { data: parseData(text), groupedRows: null };
+}
+
+function refreshStatsFromInput() {
+  const input = document.getElementById('stats-data-input');
+  const section = document.getElementById('stats-distribution-table');
+  if (!input || !section) return;
+  const dataset = parseStatsDataset(input.value);
+  if (dataset.error) {
+    section.classList.remove('hidden');
+    section.innerHTML = `<p class="stats-distribution-help">${dataset.error}</p>`;
+    document.getElementById('stats-output')?.classList.add('hidden');
+    return;
+  }
+  if (!dataset.data.length) {
+    section.classList.add('hidden');
+    return;
+  }
+  statsData = dataset.data;
+  statsGroupedRows = dataset.groupedRows;
+  section.classList.remove('hidden');
+  renderDistributionTable(section);
+  if (!document.getElementById('stats-output')?.classList.contains('hidden')) {
+    switchStatsTab(statsCurrentTab);
+  }
+}
+
 function computeStats() {
   const raw = document.getElementById('stats-data-input').value;
-  statsData = parseData(raw);
+  const dataset = parseStatsDataset(raw);
+  if (dataset.error) {
+    alert(dataset.error);
+    return;
+  }
+  statsData = dataset.data;
+  statsGroupedRows = dataset.groupedRows;
   if (statsData.length === 0) {
     alert('Please enter valid numbers.');
     return;
   }
   document.getElementById('stats-output').classList.remove('hidden');
+  document.getElementById('stats-distribution-table').classList.remove('hidden');
+  renderDistributionTable(document.getElementById('stats-distribution-table'));
   switchStatsTab('results');
+}
+
+function renderDistributionTable(container) {
+  const grouped = Array.isArray(statsGroupedRows);
+  const frequencies = grouped ? null : computeAllStats(statsData).freq;
+  const rows = grouped
+    ? statsGroupedRows.map(row => ({ label: `${r(row.lower)}-${r(row.upper)}`, frequency: row.frequency, x: row.midpoint }))
+    : Object.keys(frequencies).map(value => ({ label: Number(value), frequency: frequencies[value], x: Number(value) }));
+  const count = rows.reduce((sum, row) => sum + row.frequency, 0);
+  const sumFx = rows.reduce((sum, row) => sum + row.frequency * row.x, 0);
+  const mean = sumFx / count;
+  const sumFx2 = rows.reduce((sum, row) => sum + row.frequency * row.x ** 2, 0);
+  const varianceNumerator = rows.reduce((sum, row) => sum + row.frequency * (row.x - mean) ** 2, 0);
+  const denominator = statsDataMode === 'population' ? count : count - 1;
+  const variance = denominator > 0 ? varianceNumerator / denominator : 0;
+  const stdDev = Math.sqrt(variance);
+  const heading = grouped
+    ? ['Class Interval', 'Frequency (f)', 'Midpoint (x)', 'fx', 'x²', 'fx²']
+    : ['Value (x)', 'Frequency (f)', 'fx', 'x²', 'fx²'];
+  const modeName = statsDataMode === 'population' ? 'Population' : 'Sample';
+  container.innerHTML = `
+    <div class="stats-distribution-heading">
+      <div><p class="stats-distribution-kicker">Automatic summary</p><h2>DISTRIBUTION TABLE</h2><p>${grouped ? 'Grouped frequency distribution · midpoint calculations' : 'Discrete frequency distribution · generated from your entered values'}</p></div>
+      <span class="stats-data-count">${count} ${count === 1 ? 'value' : 'values'}</span>
+    </div>
+    <div class="stats-table-scroll" role="region" aria-label="Distribution table" tabindex="0">
+      <table class="stats-distribution-table">
+        <thead><tr>${heading.map(label => `<th scope="col">${label}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(row => `
+          <tr>
+            <td>${row.label}</td><td>${row.frequency}</td>${grouped ? `<td>${r(row.x)}</td>` : ''}
+            <td>${r(row.frequency * row.x)}</td><td>${r(row.x ** 2)}</td><td>${r(row.frequency * row.x ** 2)}</td>
+          </tr>
+        `).join('')}</tbody>
+        <tfoot><tr><th scope="row">Totals</th><td>${count}</td>${grouped ? '<td>—</td>' : ''}<td>${r(sumFx)}</td><td>—</td><td>${r(sumFx2)}</td></tr></tfoot>
+      </table>
+    </div>
+    <div class="stats-summary-heading"><h3>Descriptive summary</h3><label for="stats-data-mode-summary">Treat data as</label><select class="input-field" id="stats-data-mode-summary"><option value="sample" ${statsDataMode === 'sample' ? 'selected' : ''}>Sample</option><option value="population" ${statsDataMode === 'population' ? 'selected' : ''}>Population</option></select></div>
+    <div class="stats-summary-grid">
+      <article><span>Mean</span><strong>${r(mean)}</strong><small>Σfx / n</small></article>
+      <article><span>${modeName} variance</span><strong>${r(variance)}</strong><small>${statsDataMode === 'sample' ? 'Σf(x − x̄)² / (n − 1)' : 'Σf(x − μ)² / n'}</small></article>
+      <article><span>${modeName} standard deviation</span><strong>${r(stdDev)}</strong><small>√variance</small></article>
+    </div>
+  `;
+  const summaryMode = document.getElementById('stats-data-mode-summary');
+  if (summaryMode) summaryMode.addEventListener('change', () => {
+    statsDataMode = summaryMode.value;
+    const topMode = document.getElementById('stats-data-mode');
+    if (topMode) topMode.value = statsDataMode;
+    renderDistributionTable(container);
+    if (!document.getElementById('stats-output')?.classList.contains('hidden')) switchStatsTab(statsCurrentTab);
+  });
 }
 
 function switchStatsTab(tab) {
