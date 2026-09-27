@@ -1497,3 +1497,56 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+
+
+/* Desktop study workspace */
+@media (min-width: 901px) {
+  .exercise-page-header {
+    align-items: center;
+    margin-bottom: 22px;
+    padding: 28px 32px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: radial-gradient(ellipse at 92% 0%, rgba(8,127,240,.16), transparent 42%), var(--bg-secondary);
+    box-shadow: 0 12px 36px rgba(0,0,0,.1);
+  }
+  .exercise-page-header > div:first-child { max-width: 760px; }
+  .exercise-page-header .exercise-eyebrow { margin-bottom: 10px; }
+  .exercise-page-header h1 { color: var(--text-primary); font-size: clamp(30px, 3vw, 38px); letter-spacing: -.8px; }
+  .exercise-page-header p:last-child { max-width: 620px; margin-top: 9px; color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+  .exercise-total-badge { min-width: 172px; justify-content: center; gap: 12px; padding: 15px 18px; border-color: var(--border-accent); border-radius: 15px; background: rgba(8,127,240,.07); }
+  .exercise-total-badge strong { font-size: 30px; line-height: 1; }
+  .exercise-total-badge span { max-width: none; font-size: 12px; }
+  .exercise-toolbar { grid-template-columns: minmax(300px, 1fr) minmax(180px, 230px) minmax(180px, 230px); gap: 16px; padding: 18px; margin-bottom: 22px; border-radius: 17px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+  .exercise-toolbar .input-field { min-height: 46px; border-radius: 11px; }
+  .exercise-workspace { grid-template-columns: minmax(285px, 330px) minmax(0, 1fr); gap: 22px; }
+  .exercise-browser { position: sticky; top: 18px; padding: 18px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.07); }
+  .exercise-browser-heading { padding: 2px 2px 16px; margin-bottom: 13px; }
+  .exercise-browser-heading h2 { font-size: 15px; }
+  .exercise-list { max-height: min(70vh, 790px); gap: 7px; }
+  .exercise-list-item { grid-template-columns: 34px minmax(0,1fr) auto; gap: 11px; min-height: 64px; padding: 11px; border-radius: 12px; }
+  .exercise-list-number { font-size: 12px; }
+  .exercise-list-title { font-size: 12px; }
+  .exercise-list-subtitle { font-size: 10px; }
+  .exercise-list-status { padding: 5px 8px; }
+  .exercise-detail { padding: clamp(28px, 3.2vw, 42px); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 14px 40px rgba(0,0,0,.08); }
+  .exercise-detail-meta { padding-bottom: 17px; border-bottom: 1px solid var(--border); }
+  .exercise-topic-label { font-size: 12px; letter-spacing: .3px; }
+  .exercise-question-index { margin-top: 28px; font-size: 11px; }
+  .exercise-detail-title { margin-top: 9px; font-size: clamp(27px, 2.4vw, 34px); letter-spacing: -.5px; }
+  .exercise-detail-hint { max-width: 720px; margin-top: 10px; font-size: 14px; }
+  .exercise-question-block, .exercise-solution-block { margin-top: 30px; padding-top: 24px; }
+  .exercise-section-heading { gap: 12px; margin-bottom: 15px; }
+  .exercise-section-heading > span { width: 30px; height: 30px; border-radius: 9px; font-size: 11px; }
+  .exercise-section-heading h3 { font-size: 15px; }
+  .exercise-problem { padding: 22px 24px; border-radius: 14px; border-left: 3px solid var(--accent); font-size: 15px; line-height: 1.9; }
+  .exercise-step-progress { margin-bottom: 15px; font-size: 11px; }
+  .exercise-step-list { gap: 12px; }
+  .exercise-step-card { grid-template-columns: 34px minmax(0,1fr); gap: 14px; padding: 18px 20px; border-radius: 14px; }
+  .exercise-step-number { width: 30px; height: 30px; border-radius: 9px; font-size: 11px; }
+  .exercise-step-card pre { margin-top: 3px; font-size: 13px; line-height: 1.9; }
+  .exercise-step-actions { gap: 12px; margin-top: 17px; }
+  .exercise-step-actions .primary-btn, .exercise-step-actions .secondary-btn { min-height: 46px; padding-inline: 20px; }
+  .exercise-pagination { margin-top: 30px; padding-top: 22px; }
+  .exercise-pagination .secondary-btn { min-width: 118px; }
+}
