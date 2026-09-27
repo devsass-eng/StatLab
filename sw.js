@@ -1,4 +1,4 @@
-const CACHE_NAME = 'statlab-v5';
+const CACHE_NAME = 'statlab-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -17,7 +17,10 @@ const ASSETS_TO_CACHE = [
   './src/js/formulas.js',
   './src/lib/chart.umd.js',
   './src/lib/math.js',
-  './assets/icon.svg'
+  './assets/icon.svg',
+  './assets/icon-192.png',
+  './assets/icon.png',
+  './assets/apple-touch-icon.png'
 ];
 
 // Install event — cache assets
