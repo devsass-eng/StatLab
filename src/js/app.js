@@ -20,10 +20,33 @@ function initTheme() {
 }
 
 function applyTheme() {
-  document.getElementById('app-body').className = isDark ? 'dark-mode' : 'light-mode';
+  const body = document.getElementById('app-body');
+  body.classList.toggle('dark-mode', isDark);
+  body.classList.toggle('light-mode', !isDark);
   document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
   localStorage.setItem('statlab-theme', isDark ? 'dark' : 'light');
 }
+
+const appBody = document.getElementById('app-body');
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+const navBackdrop = document.getElementById('nav-backdrop');
+
+function closeMobileNav() {
+  appBody.classList.remove('mobile-nav-open');
+  mobileMenuToggle.setAttribute('aria-expanded', 'false');
+  mobileMenuToggle.setAttribute('aria-label', 'Open navigation menu');
+}
+
+mobileMenuToggle.addEventListener('click', () => {
+  const isOpen = appBody.classList.toggle('mobile-nav-open');
+  mobileMenuToggle.setAttribute('aria-expanded', String(isOpen));
+  mobileMenuToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+});
+
+navBackdrop.addEventListener('click', closeMobileNav);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMobileNav();
+});
 
 document.getElementById('theme-toggle').addEventListener('click', () => {
   isDark = !isDark;
@@ -110,6 +133,7 @@ document.querySelectorAll('.nav-item').forEach(el => {
   el.addEventListener('click', (e) => {
     e.preventDefault();
     navigateTo(el.dataset.page);
+    closeMobileNav();
   });
 });
 

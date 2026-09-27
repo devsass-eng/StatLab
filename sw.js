@@ -1,16 +1,23 @@
-const CACHE_NAME = 'statlab-v1';
+const CACHE_NAME = 'statlab-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './src/css/styles.css',
   './src/js/app.js',
+  './src/js/calculator.js',
   './src/js/statistics.js',
   './src/js/probability.js',
+  './src/js/distributions.js',
+  './src/js/hypothesis.js',
+  './src/js/regression.js',
+  './src/js/simulation.js',
   './src/js/practice.js',
   './src/js/exercises.js',
+  './src/js/formulas.js',
   './src/lib/chart.umd.js',
-  './src/lib/math.js'
+  './src/lib/math.js',
+  './assets/icon.svg'
 ];
 
 // Install event — cache assets
@@ -38,7 +45,7 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  event.waitUntil(self.clients.claim());
 });
 
 // Fetch event — network first, fallback to cache (stale-while-revalidate pattern is better, but cache-first is fine for offline apps)

@@ -2,15 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>StatLab — Statistics & Probability</title>
   <meta name="description" content="StatLab: Your personal statistics and probability study companion. Scientific calculator, stats lab, probability tools, distributions, simulations, practice exams and more."/>
   
   <!-- PWA Manifest & Meta -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#7c6aff" />
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icon.svg" />
+  <meta name="theme-color" content="#087ff0" />
   
   <!-- Fonts loaded locally via CSS fallback for offline use -->
   <link rel="stylesheet" href="src/css/styles.css"/>
@@ -20,8 +23,11 @@
   <!-- Title Bar -->
   <div class="titlebar" id="titlebar">
     <div class="titlebar-left">
+      <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation menu" aria-controls="sidebar" aria-expanded="false">
+        <span class="menu-glyph" aria-hidden="true"></span>
+      </button>
       <div class="titlebar-logo">
-        <span class="logo-icon">∑</span>
+        <img class="logo-mark" src="assets/icon.svg" alt="" />
         <span class="logo-text">StatLab</span>
       </div>
     </div>
@@ -35,9 +41,11 @@
     </div>
   </div>
 
+  <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation menu" tabindex="-1"></button>
+
   <!-- Sidebar Navigation -->
   <div class="sidebar" id="sidebar">
-    <nav class="nav-menu">
+    <nav class="nav-menu" aria-label="Main navigation">
       <a class="nav-item active" data-page="home" href="#" id="nav-home">
         <span class="nav-icon">⌂</span>
         <span class="nav-label">Home</span>
